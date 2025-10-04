@@ -1,24 +1,20 @@
 {
   "displayName": "Homebridge Uconnect",
   "name": "homebridge-uconnect",
-  "version": "1.0.1",
-  "description": "A plugin to expose Uconnect Car controls to lock/unlock car and start/stop engine",
+  "version": "1.1.0",
+  "description": "A plugin to expose Uconnect Car controls to lock/unlock car and start/stop engine with SiriusXM Guardian support",
   "license": "MIT",
   "author": {
-    "name": "Gilad Yahalom",
-    "url": "https://github.com/gyahalom"
+    "name": "A. Franke",
+    "url": "https://github.com/frankea"
   },
-  "homepage": "https://github.com/gyahalom/homebridge-uconnect#readme",
+  "homepage": "https://github.com/frankea/homebridge-uconnect#readme",
   "repository": {
     "type": "git",
-    "url": "git://github.com/gyahalom/homebridge-uconnect.git"
+    "url": "git://github.com/frankea/homebridge-uconnect.git"
   },
   "bugs": {
-    "url": "https://github.com/gyahalom/homebridge-uconnect/issues"
-  },
-  "funding": {
-    "type" : "paypal",
-    "url" : "https://paypal.me/GiladYahalom"
+    "url": "https://github.com/frankea/homebridge-uconnect/issues"
   },
   "engines": {
     "node": ">=14.18.1",
