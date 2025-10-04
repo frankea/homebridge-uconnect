@@ -458,14 +458,28 @@ class MoparApi {
       query: { stage: 'ALL' },
     });
 
+    const vehicles: VehicleInfo[] = [];
+    const parsedVehicles: RawVehicle[] = [];
     const items = response.data?.vehicles;
-    if (!Array.isArray(items)) {
+    if (Array.isArray(items)) {
+      parsedVehicles.push(...items as RawVehicle[]);
+    } else if (items && typeof items === 'object') {
+      parsedVehicles.push(...Object.values(items as Record<string, RawVehicle>));
+    }
+
+    if (parsedVehicles.length === 0 && response.data && typeof response.data === 'object') {
+      for (const value of Object.values(response.data)) {
+        if (Array.isArray(value)) {
+          parsedVehicles.push(...value as RawVehicle[]);
+        }
+      }
+    }
+
+    if (parsedVehicles.length === 0) {
       return [];
     }
 
-    const typedItems = items as RawVehicle[];
-    const vehicles: VehicleInfo[] = [];
-    for (const item of typedItems) {
+    for (const item of parsedVehicles) {
       const vin = item?.vin ?? item?.vehicle?.vin;
       if (!vin) {
         continue;
