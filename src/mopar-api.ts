@@ -622,7 +622,7 @@ class MoparApi {
       ...(config.headers ?? {}),
     };
 
-    if (body && !hasHeader(headers, 'content-type')) {
+    if (!hasHeader(headers, 'content-type')) {
       headers['content-type'] = 'application/json';
     }
 
@@ -671,6 +671,9 @@ class MoparApi {
       'x-api-key': apiKey,
       locale: this.brandConfig.locale,
       'x-originator-type': 'web',
+      accept: 'application/json, text/plain, */*',
+      'accept-language': this.brandConfig.locale.replace('_', '-'),
+      'user-agent': 'python-requests/2.31.0',
     };
   }
 
