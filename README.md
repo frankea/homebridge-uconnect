@@ -62,8 +62,29 @@ If you choose to configure this plugin directly instead of using the [Homebridge
     "email": "email@email.com",
     "password": "password",
     "pin": "1234",
-    "timeout": 30
+    "brand": "jeep",
+    "region": "us",
+    "timeout": 30,
+    "useGuardian": false
 }]
 ```
+
+### Configuration Options
+
+| Option | Required | Description | Default |
+|--------|----------|-------------|---------|
+| `email` | ✅ | Your Uconnect account email | - |
+| `password` | ✅ | Your Uconnect account password | - |
+| `pin` | ⚠️ | Your Uconnect 4-digit PIN (required for remote commands) | - |
+| `brand` | ❌ | Vehicle brand (jeep, fiat, ram, dodge, alfa_romeo, chrysler, maserati) | `jeep` |
+| `region` | ❌ | Region (us, ca, eu, asia) | `us` |
+| `timeout` | ❌ | Command timeout in seconds | `30` |
+| `useGuardian` | ❌ | Enable SiriusXM Guardian support (try this if standard Uconnect fails) | `false` |
+
+**Important Notes:**
+- **Brand Selection**: Choose the brand that matches your vehicle (e.g., `jeep` for Jeep vehicles)
+- **Region Selection**: Select the region where your vehicle is registered (e.g., `us` for United States)
+- **SiriusXM Guardian Support**: If your vehicle uses SiriusXM Guardian services instead of standard Uconnect cellular, set `useGuardian: true`. This enables alternative API endpoints for Guardian vehicles.
+- **Fallback Logic**: The plugin will attempt Guardian endpoints if standard Uconnect fails, but you can force Guardian mode with this setting.
 
 For most people, I recommend using [Homebridge Configuration web UI](https://github.com/oznu/homebridge-config-ui-x) to configure this plugin rather than doing so directly. It's easier to use for most users, especially newer users, and less prone to typos, leading to other problems.

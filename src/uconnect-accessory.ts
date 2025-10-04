@@ -124,29 +124,35 @@ export class UconnectPlatformAccessory {
     this.platform.log.debug('Triggered SET LockTargetState:', value);
     if (value === this.platform.Characteristic.LockTargetState.SECURED) {
       this.lockTargetState = value;
-      if (await moparApi.signIn(this.platform.username, this.platform.password)) {
-        const requestId = await moparApi.lockCar(this.accessory.context.vehicle.vin, this.platform.pin);
-        if (!moparApi.isValidRequestId(requestId)) {
-          this.platform.log.error('Lock failed to submit request:', requestId);
-        }
-        this.lockCurrentState = this.platform.Characteristic.LockCurrentState.UNKNOWN;
-        // Wait for service request to complete within timeout
-        const status = await moparApi.checkLockStatus(this.accessory.context.vehicle.vin, requestId,
-          this.platform.timeout);
-        this.platform.log.debug('Lock request status ended with:', status);
-        if (status === 'SUCCESS') {
-          this.platform.log.info('Lock command was successful');
-          this.lockCurrentState = this.platform.Characteristic.LockCurrentState.SECURED;
-          setTimeout(() => {
+      try {
+        if (await moparApi.signIn(this.platform.username, this.platform.password, this.platform.brand)) {
+          this.platform.log.debug('Successfully authenticated for lock command');
+          const requestId = await moparApi.lockCar(this.accessory.context.vehicle.vin, this.platform.pin, this.platform.useGuardian);
+          if (!moparApi.isValidRequestId(requestId)) {
+            this.platform.log.error('Lock failed to submit request:', requestId);
+          }
+          this.lockCurrentState = this.platform.Characteristic.LockCurrentState.UNKNOWN;
+          // Wait for service request to complete within timeout
+          const status = await moparApi.checkLockStatus(this.accessory.context.vehicle.vin, requestId,
+            this.platform.timeout, this.platform.useGuardian);
+          this.platform.log.debug('Lock request status ended with:', status);
+          if (status === 'SUCCESS') {
+            this.platform.log.info('Lock command was successful');
+            this.lockCurrentState = this.platform.Characteristic.LockCurrentState.SECURED;
+            setTimeout(() => {
+              this.lockTargetState = this.platform.Characteristic.LockTargetState.UNSECURED;
+              this.lockCurrentState = this.platform.Characteristic.LockCurrentState.UNKNOWN;
+            }, 3000);
+          } else {
+            this.platform.log.error('Lock command failed');
             this.lockTargetState = this.platform.Characteristic.LockTargetState.UNSECURED;
-            this.lockCurrentState = this.platform.Characteristic.LockCurrentState.UNKNOWN;
-          }, 3000);
+          }
         } else {
-          this.platform.log.error('Lock command failed');
-          this.lockTargetState = this.platform.Characteristic.LockTargetState.UNSECURED;
+          this.platform.log.error('Failed to authenticate for lock command');
         }
-      } else {
-        this.platform.log.error('Failed to authenticate');
+      } catch (error) {
+        this.platform.log.error('Lock command authentication error:', error instanceof Error ? error.message : String(error));
+        this.lockTargetState = this.platform.Characteristic.LockTargetState.UNSECURED;
       }
     }
   }
@@ -155,29 +161,35 @@ export class UconnectPlatformAccessory {
     this.platform.log.debug('Triggered SET UnlockTargetState:', value);
     if (value === this.platform.Characteristic.LockTargetState.UNSECURED) {
       this.unlockTargetState = value;
-      if (await moparApi.signIn(this.platform.username, this.platform.password)) {
-        const requestId = await moparApi.unlockCar(this.accessory.context.vehicle.vin, this.platform.pin);
-        if (!moparApi.isValidRequestId(requestId)) {
-          this.platform.log.error('Unlock failed to submit request:', requestId);
-        }
-        this.unlockCurrentState = this.platform.Characteristic.LockCurrentState.UNKNOWN;
-        // Wait for service request to complete within timeout
-        const status = await moparApi.checkUnlockStatus(this.accessory.context.vehicle.vin, requestId,
-          this.platform.timeout);
-        this.platform.log.debug('Unlock request status ended with:', status);
-        if (status === 'SUCCESS') {
-          this.platform.log.info('Unlock command was successful');
-          this.unlockCurrentState = this.platform.Characteristic.LockCurrentState.UNSECURED;
-          setTimeout(() => {
+      try {
+        if (await moparApi.signIn(this.platform.username, this.platform.password, this.platform.brand)) {
+          this.platform.log.debug('Successfully authenticated for unlock command');
+          const requestId = await moparApi.unlockCar(this.accessory.context.vehicle.vin, this.platform.pin, this.platform.useGuardian);
+          if (!moparApi.isValidRequestId(requestId)) {
+            this.platform.log.error('Unlock failed to submit request:', requestId);
+          }
+          this.unlockCurrentState = this.platform.Characteristic.LockCurrentState.UNKNOWN;
+          // Wait for service request to complete within timeout
+          const status = await moparApi.checkUnlockStatus(this.accessory.context.vehicle.vin, requestId,
+            this.platform.timeout, this.platform.useGuardian);
+          this.platform.log.debug('Unlock request status ended with:', status);
+          if (status === 'SUCCESS') {
+            this.platform.log.info('Unlock command was successful');
+            this.unlockCurrentState = this.platform.Characteristic.LockCurrentState.UNSECURED;
+            setTimeout(() => {
+              this.unlockTargetState = this.platform.Characteristic.LockTargetState.SECURED;
+              this.unlockCurrentState = this.platform.Characteristic.LockCurrentState.UNKNOWN;
+            }, 3000);
+          } else {
+            this.platform.log.error('Unlock command failed');
             this.unlockTargetState = this.platform.Characteristic.LockTargetState.SECURED;
-            this.unlockCurrentState = this.platform.Characteristic.LockCurrentState.UNKNOWN;
-          }, 3000);
+          }
         } else {
-          this.platform.log.error('Unlock command failed');
-          this.unlockTargetState = this.platform.Characteristic.LockTargetState.SECURED;
+          this.platform.log.error('Failed to authenticate for unlock command');
         }
-      } else {
-        this.platform.log.error('Failed to authenticate');
+      } catch (error) {
+        this.platform.log.error('Unlock command authentication error:', error instanceof Error ? error.message : String(error));
+        this.unlockTargetState = this.platform.Characteristic.LockTargetState.SECURED;
       }
     }
   }
@@ -193,26 +205,32 @@ export class UconnectPlatformAccessory {
     value = value as boolean;
     if (value) {
       this.startEngineState = value;
-      if (await moparApi.signIn(this.platform.username, this.platform.password)) {
-        const requestId = await moparApi.startCar(this.accessory.context.vehicle.vin, this.platform.pin);
-        if (!moparApi.isValidRequestId(requestId)) {
-          this.platform.log.error('Engine Start failed to submit request:', requestId);
-        }
-        // Wait for service request to complete within timeout
-        const status = await moparApi.checkStartStatus(this.accessory.context.vehicle.vin, requestId,
-          this.platform.timeout);
-        this.platform.log.debug('Engine Start request status ended with:', status);
-        if (status === 'SUCCESS') {
-          this.platform.log.info('Engine Start command was successful');
-          setTimeout(() => {
+      try {
+        if (await moparApi.signIn(this.platform.username, this.platform.password, this.platform.brand)) {
+          this.platform.log.debug('Successfully authenticated for engine start command');
+          const requestId = await moparApi.startCar(this.accessory.context.vehicle.vin, this.platform.pin, this.platform.useGuardian);
+          if (!moparApi.isValidRequestId(requestId)) {
+            this.platform.log.error('Engine Start failed to submit request:', requestId);
+          }
+          // Wait for service request to complete within timeout
+          const status = await moparApi.checkStartStatus(this.accessory.context.vehicle.vin, requestId,
+            this.platform.timeout, this.platform.useGuardian);
+          this.platform.log.debug('Engine Start request status ended with:', status);
+          if (status === 'SUCCESS') {
+            this.platform.log.info('Engine Start command was successful');
+            setTimeout(() => {
+              this.startEngineState = !value;
+            }, 3000);
+          } else {
+            this.platform.log.error('Engine start command failed');
             this.startEngineState = !value;
-          }, 3000);
+          }
         } else {
-          this.platform.log.error('Engine start command failed');
-          this.startEngineState = !value;
+          this.platform.log.error('Failed to authenticate for engine start command');
         }
-      } else {
-        this.platform.log.error('Failed to authenticate');
+      } catch (error) {
+        this.platform.log.error('Engine start command authentication error:', error instanceof Error ? error.message : String(error));
+        this.startEngineState = !value;
       }
     }
   }
@@ -228,26 +246,32 @@ export class UconnectPlatformAccessory {
     value = value as boolean;
     if (!value) {
       this.stopEngineState = value;
-      if (await moparApi.signIn(this.platform.username, this.platform.password)) {
-        const requestId = await moparApi.stopCar(this.accessory.context.vehicle.vin, this.platform.pin);
-        if (!moparApi.isValidRequestId(requestId)) {
-          this.platform.log.error('Engine Stop failed to submit request:', requestId);
-        }
-        // Wait for service request to complete within timeout
-        const status = await moparApi.checkStopStatus(this.accessory.context.vehicle.vin, requestId,
-          this.platform.timeout);
-        this.platform.log.debug('Engine Stop request status ended with:', status);
-        if (status === 'SUCCESS') {
-          this.platform.log.info('Engine Stop command was successful');
-          setTimeout(() => {
+      try {
+        if (await moparApi.signIn(this.platform.username, this.platform.password, this.platform.brand)) {
+          this.platform.log.debug('Successfully authenticated for engine stop command');
+          const requestId = await moparApi.stopCar(this.accessory.context.vehicle.vin, this.platform.pin, this.platform.useGuardian);
+          if (!moparApi.isValidRequestId(requestId)) {
+            this.platform.log.error('Engine Stop failed to submit request:', requestId);
+          }
+          // Wait for service request to complete within timeout
+          const status = await moparApi.checkStopStatus(this.accessory.context.vehicle.vin, requestId,
+            this.platform.timeout, this.platform.useGuardian);
+          this.platform.log.debug('Engine Stop request status ended with:', status);
+          if (status === 'SUCCESS') {
+            this.platform.log.info('Engine Stop command was successful');
+            setTimeout(() => {
+              this.stopEngineState = !value;
+            }, 3000);
+          } else {
+            this.platform.log.error('Engine stop command failed');
             this.stopEngineState = !value;
-          }, 3000);
+          }
         } else {
-          this.platform.log.error('Engine stop command failed');
-          this.stopEngineState = !value;
+          this.platform.log.error('Failed to authenticate for engine stop command');
         }
-      } else {
-        this.platform.log.error('Failed to authenticate');
+      } catch (error) {
+        this.platform.log.error('Engine stop command authentication error:', error instanceof Error ? error.message : String(error));
+        this.stopEngineState = !value;
       }
     }
   }

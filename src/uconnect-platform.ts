@@ -1,5 +1,5 @@
 import { API, DynamicPlatformPlugin, Logger, PlatformAccessory, PlatformConfig, Service, Characteristic } from 'homebridge';
-import { PLATFORM_NAME, PLUGIN_NAME } from './settings';
+import { PLATFORM_NAME, PLUGIN_NAME, VEHICLE_BRANDS, VEHICLE_REGIONS, VehicleBrand, VehicleRegion, DEFAULT_CONFIG } from './settings';
 import { UconnectPlatformAccessory } from './uconnect-accessory';
 import { moparApi } from './mopar-api';
 
@@ -19,7 +19,10 @@ export class UconnectHomebridgePlatform implements DynamicPlatformPlugin {
   public readonly username: string;
   public readonly password: string;
   public readonly pin: string;
+  public readonly brand: VehicleBrand;
+  public readonly region: VehicleRegion;
   public readonly timeout : number;
+  public readonly useGuardian: boolean;
 
   constructor(
     public readonly log: Logger,
@@ -28,9 +31,17 @@ export class UconnectHomebridgePlatform implements DynamicPlatformPlugin {
   ) {
     this.username = config.email;
     this.password = config.password;
-    this.pin = config.pin;
-    this.timeout = config.timeout;
+    this.pin = config.pin || '';
+    this.brand = (config.brand as VehicleBrand) || DEFAULT_CONFIG.brand;
+    this.region = (config.region as VehicleRegion) || DEFAULT_CONFIG.region;
+    this.timeout = config.timeout || DEFAULT_CONFIG.timeout;
+    this.useGuardian = config.useGuardian || DEFAULT_CONFIG.useGuardian;
+
     this.log.debug('Finished initializing platform:', this.config.name);
+    this.log.info(`Configured for ${VEHICLE_BRANDS[this.brand].name} in ${VEHICLE_REGIONS[this.region].name}`);
+    if (this.useGuardian) {
+      this.log.info('SiriusXM Guardian mode enabled');
+    }
 
     // When this event is fired it means Homebridge has restored all cached accessories from disk.
     // Dynamic Platform plugins should only register new accessories after this event was fired,
@@ -60,12 +71,20 @@ export class UconnectHomebridgePlatform implements DynamicPlatformPlugin {
    * must not be registered again to prevent "duplicate UUID" errors.
    */
   async discoverDevices() {
+    this.log.info('Starting device discovery...');
 
-    // EXAMPLE ONLY
-    // A real plugin you would discover accessories from the local network, cloud services
-    // or a user-defined array in the platform config.
-    if (! await moparApi.signIn(this.username, this.password)) {
-      this.log.error('Failed to authenticate');
+    // Authenticate with retry logic
+    this.log.info(`Authenticating with ${VEHICLE_BRANDS[this.brand].name}...`);
+    try {
+      if (! await moparApi.signIn(this.username, this.password, this.brand)) {
+        this.log.error(`Failed to authenticate with ${VEHICLE_BRANDS[this.brand].name} after multiple attempts`);
+        this.log.error('Please check your credentials and try again');
+        return;
+      }
+      this.log.info(`Successfully authenticated with ${VEHICLE_BRANDS[this.brand].name}`);
+    } catch (error) {
+      this.log.error('Authentication error:', error instanceof Error ? error.message : String(error));
+      this.log.error('Please check your credentials and try again');
       return;
     }
     const vehicles = await moparApi.getVehicleData();
