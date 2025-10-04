@@ -458,24 +458,103 @@ class MoparApi {
       query: { stage: 'ALL' },
     });
 
-    const vehicles: VehicleInfo[] = [];
-    const parsedVehicles: RawVehicle[] = [];
-    const items = response.data?.vehicles;
-    if (Array.isArray(items)) {
-      parsedVehicles.push(...items as RawVehicle[]);
-    } else if (items && typeof items === 'object') {
-      parsedVehicles.push(...Object.values(items as Record<string, RawVehicle>));
-    }
+    const candidates = new Map<string, Record<string, unknown>>();
 
-    if (parsedVehicles.length === 0 && response.data && typeof response.data === 'object') {
-      for (const value of Object.values(response.data)) {
-        if (Array.isArray(value)) {
-          parsedVehicles.push(...value as RawVehicle[]);
+    const registerCandidate = (vin: string | undefined, source?: Record<string, unknown>) => {
+      if (!vin) {
+        return;
+      }
+      const normalizedVin = sanitizeString(vin)?.toUpperCase();
+      if (!normalizedVin || !VIN_PATTERN.test(normalizedVin)) {
+        return;
+      }
+
+      const merged = candidates.get(normalizedVin) ?? {};
+      const sources: Array<Record<string, unknown> | undefined> = [source];
+
+      if (source) {
+        const nestedKeys = ['vehicle', 'vehicleInfo', 'info', 'details', 'vehicleDetails', 'summary'];
+        for (const key of nestedKeys) {
+          const nested = source[key as keyof typeof source];
+          if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+            sources.push(nested as Record<string, unknown>);
+          }
         }
       }
-    }
 
-    if (parsedVehicles.length === 0) {
+      for (const current of sources) {
+        if (!current) {
+          continue;
+        }
+        for (const [key, value] of Object.entries(current)) {
+          if (value === undefined || value === null) {
+            continue;
+          }
+          if (typeof value === 'string' && value.trim() === '') {
+            continue;
+          }
+          if (!(key in merged)) {
+            merged[key] = value;
+          }
+        }
+      }
+
+      merged.vin = normalizedVin;
+      candidates.set(normalizedVin, merged);
+    };
+
+    const extractVinFromObject = (record: Record<string, unknown>): string | undefined => {
+      const potentialKeys = ['vin', 'VIN', 'Vin', 'vehicleIdentificationNumber'];
+      for (const key of potentialKeys) {
+        const value = record[key];
+        if (typeof value === 'string' && VIN_PATTERN.test(value.toUpperCase())) {
+          return value;
+        }
+      }
+
+      const nestedKeys = ['vehicle', 'vehicleInfo', 'vehicleDetails', 'summary'];
+      for (const key of nestedKeys) {
+        const nested = record[key];
+        if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+          const nestedVin = extractVinFromObject(nested as Record<string, unknown>);
+          if (nestedVin) {
+            return nestedVin;
+          }
+        }
+      }
+
+      return undefined;
+    };
+
+    const visit = (node: unknown) => {
+      if (Array.isArray(node)) {
+        for (const item of node) {
+          visit(item);
+        }
+        return;
+      }
+      if (!node || typeof node !== 'object') {
+        return;
+      }
+
+      const record = node as Record<string, unknown>;
+      const detectedVin = extractVinFromObject(record);
+      registerCandidate(detectedVin, record);
+
+      for (const [key, value] of Object.entries(record)) {
+        if (VIN_PATTERN.test(key.toUpperCase())) {
+          const candidateRecord = value && typeof value === 'object' && !Array.isArray(value)
+            ? value as Record<string, unknown>
+            : undefined;
+          registerCandidate(key, candidateRecord);
+        }
+        visit(value);
+      }
+    };
+
+    visit(response.data);
+
+    if (candidates.size === 0) {
       const diagnostic: string[] = [];
       const data = response.data ?? {};
       if (data && typeof data === 'object') {
@@ -494,19 +573,53 @@ class MoparApi {
       throw new Error(`No vehicles in response. Observed top-level keys: ${diagnostic.join(', ') || 'none'}`);
     }
 
-    for (const item of parsedVehicles) {
-      const vin = item?.vin ?? item?.vehicle?.vin;
-      if (!vin) {
-        continue;
+    const vehicles: VehicleInfo[] = [];
+    for (const [vin, raw] of candidates.entries()) {
+      const candidateSources: Record<string, unknown>[] = [raw];
+      const nestedKeys = ['vehicle', 'vehicleInfo', 'info', 'details', 'vehicleDetails', 'summary'];
+      for (const key of nestedKeys) {
+        const nested = raw[key];
+        if (nested && typeof nested === 'object' && !Array.isArray(nested)) {
+          candidateSources.push(nested as Record<string, unknown>);
+        }
       }
-      const make = sanitizeString(item?.make) || sanitizeString(item?.brand) || 'Unknown';
-      const model = sanitizeString(item?.modelDescription) || sanitizeString(item?.model) || '';
-      const yearValue = item?.tsoModelYear ?? item?.year ?? item?.modelYear;
-      const year = yearValue ? String(yearValue) : '';
-      const nickname = sanitizeString(item?.nickname) || sanitizeString(item?.vehicleNickname);
-      const defaultTitle = [year, make, model].filter(Boolean).join(' ').trim();
-      const title = nickname || defaultTitle || vin;
-      vehicles.push({ vin, title, make, model: model || defaultTitle || 'Vehicle', year });
+
+      const pickString = (keys: string[]): string | undefined => {
+        for (const source of candidateSources) {
+          for (const key of keys) {
+            const value = source[key];
+            if (typeof value === 'string' && value.trim()) {
+              return value;
+            }
+          }
+        }
+        return undefined;
+      };
+
+      const make = sanitizeString(pickString(['make', 'brand', 'makeName', 'vehicleBrand', 'vehicleBrandName'])) || 'Unknown';
+      const model = sanitizeString(pickString([
+        'model',
+        'modelDescription',
+        'modelName',
+        'trim',
+        'trimDescription',
+        'vehicleModel',
+        'vehicleModelName',
+      ])) || 'Vehicle';
+      const year = sanitizeString(pickString(['year', 'modelYear', 'tsoModelYear', 'vehicleModelYear'])) || '';
+      const nickname = sanitizeString(pickString(['nickname', 'vehicleNickname', 'customName', 'displayName', 'title']));
+
+      const defaultTitleParts = [year, make !== 'Unknown' ? make : '', model !== 'Vehicle' ? model : ''].filter(Boolean);
+      const defaultTitle = defaultTitleParts.length ? defaultTitleParts.join(' ').trim() : `Vehicle ${vin.slice(-6)}`;
+      const title = nickname || defaultTitle;
+
+      vehicles.push({
+        vin,
+        title,
+        make,
+        model,
+        year,
+      });
     }
 
     return vehicles;
@@ -921,6 +1034,7 @@ function mapBrandKeyToVehicleBrand(key: BrandKey): VehicleBrand {
 }
 
 const apiInstance = new MoparApi();
+const VIN_PATTERN = /^[A-HJ-NPR-Z0-9]{17}$/;
 
 async function signInWithRetry(
   username: string,
