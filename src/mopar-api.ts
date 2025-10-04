@@ -593,7 +593,14 @@ class MoparApi {
           diagnostic.push(`${key}:${descriptor}`);
         }
       }
-      throw new Error(`No vehicles in response. Observed top-level keys: ${diagnostic.join(', ') || 'none'}`);
+      const sample = (() => {
+        try {
+          return JSON.stringify(response.data)?.slice(0, 800) ?? '';
+        } catch (error) {
+          return `unserializable:${error instanceof Error ? error.message : String(error)}`;
+        }
+      })();
+      throw new Error(`No vehicles in response. Observed top-level keys: ${diagnostic.join(', ') || 'none'}; sample=${sample}`);
     }
 
     const vehicles: VehicleInfo[] = [];
