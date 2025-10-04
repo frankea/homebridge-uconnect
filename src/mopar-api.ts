@@ -385,6 +385,8 @@ interface NotificationItem {
   };
 }
 
+type AccountResponse = Record<string, unknown>;
+
 interface PinAuthResponse {
   token?: string;
 }
@@ -577,6 +579,37 @@ class MoparApi {
       }
     }
 
+    const fallbackDiagnostics: string[] = [];
+
+    if (candidates.size === 0) {
+      try {
+        const accountResponse = await this.signedRequest<AccountResponse>({
+          base: 'api',
+          method: 'GET',
+          path: '/v1/account',
+        });
+
+        fallbackDiagnostics.push('account:success');
+
+        if (accountResponse.data && typeof accountResponse.data === 'object') {
+          const accountData = accountResponse.data as Record<string, unknown>;
+          const ownedVins = accountData.owned_vins;
+          if (ownedVins && typeof ownedVins === 'object' && !Array.isArray(ownedVins)) {
+            for (const [vinKey, value] of Object.entries(ownedVins as Record<string, unknown>)) {
+              const detail = value && typeof value === 'object' && !Array.isArray(value)
+                ? value as Record<string, unknown>
+                : undefined;
+              registerCandidate(vinKey, detail);
+            }
+          }
+
+          visit(accountData);
+        }
+      } catch (error) {
+        fallbackDiagnostics.push(`account:error:${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
     if (candidates.size === 0) {
       const diagnostic: string[] = [];
       const data = response.data ?? {};
@@ -600,7 +633,10 @@ class MoparApi {
           return `unserializable:${error instanceof Error ? error.message : String(error)}`;
         }
       })();
-      throw new Error(`No vehicles in response. Observed top-level keys: ${diagnostic.join(', ') || 'none'}; sample=${sample}`);
+      throw new Error(
+        `No vehicles in response. Observed top-level keys: ${diagnostic.join(', ') || 'none'}; ` +
+        `fallback=${fallbackDiagnostics.join(';') || 'none'}; sample=${sample}`,
+      );
     }
 
     const vehicles: VehicleInfo[] = [];
