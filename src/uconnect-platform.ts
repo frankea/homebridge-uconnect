@@ -92,6 +92,11 @@ export class UconnectHomebridgePlatform implements DynamicPlatformPlugin {
       this.log.error('Failed to retrieve vehicle list:', vehicles);
       return;
     }
+    if (vehicles.length === 0) {
+      this.log.warn('Authentication succeeded but no vehicles were returned.');
+      this.log.warn('Verify brand/region settings and that the Mopar account shows at least one connected vehicle.');
+      return;
+    }
 
     // loop over the discovered devices and register each one if it has not already been registered
     for (const vehicle of vehicles) {
