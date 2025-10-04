@@ -35,6 +35,35 @@
            "type": "password"
          }
       },
+      "brand": {
+        "title": "Vehicle Brand",
+        "type": "string",
+        "required": false,
+        "default": "jeep",
+        "description": "Select the brand that matches your vehicle. Default: Jeep.",
+        "oneOf": [
+          { "title": "Jeep", "enum": ["jeep"] },
+          { "title": "Ram", "enum": ["ram"] },
+          { "title": "Dodge", "enum": ["dodge"] },
+          { "title": "Chrysler", "enum": ["chrysler"] },
+          { "title": "Fiat", "enum": ["fiat"] },
+          { "title": "Alfa Romeo", "enum": ["alfa_romeo"] },
+          { "title": "Maserati", "enum": ["maserati"] }
+        ]
+      },
+      "region": {
+        "title": "Region",
+        "type": "string",
+        "required": false,
+        "default": "us",
+        "description": "Region where the vehicle is registered. Default: United States.",
+        "oneOf": [
+          { "title": "United States", "enum": ["us"] },
+          { "title": "Canada", "enum": ["ca"] },
+          { "title": "Europe", "enum": ["eu"] },
+          { "title": "Asia", "enum": ["asia"] }
+        ]
+      },
       "timeout": {
         "title": "Timeout",
         "type": "number",
@@ -43,6 +72,13 @@
         "default": 30,
         "minimum": 0,
         "maximum": 300
+      },
+      "useGuardian": {
+        "title": "Enable SiriusXM Guardian",
+        "type": "boolean",
+        "required": false,
+        "default": false,
+        "description": "Toggle to use Guardian-specific command endpoints when available. Leave off unless your vehicle uses SiriusXM Guardian."
       },
       "name": {
         "title": "Name",

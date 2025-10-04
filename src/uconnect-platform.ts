@@ -76,7 +76,7 @@ export class UconnectHomebridgePlatform implements DynamicPlatformPlugin {
     // Authenticate with retry logic
     this.log.info(`Authenticating with ${VEHICLE_BRANDS[this.brand].name}...`);
     try {
-      if (! await moparApi.signIn(this.username, this.password, this.brand)) {
+      if (! await moparApi.signIn(this.username, this.password, this.brand, this.region)) {
         this.log.error(`Failed to authenticate with ${VEHICLE_BRANDS[this.brand].name} after multiple attempts`);
         this.log.error('Please check your credentials and try again');
         return;

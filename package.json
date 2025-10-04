@@ -45,8 +45,12 @@
     "car"
   ],
   "dependencies": {
+    "@aws-sdk/client-cognito-identity": "^3.686.0",
     "axios": "^1.5.1",
-    "qs": "^6.11.0"
+    "axios-cookiejar-support": "^6.0.4",
+    "aws4": "^1.13.2",
+    "qs": "^6.11.0",
+    "tough-cookie": "^4.1.4"
   },
   "devDependencies": {
     "@types/node": "^16.10.9",

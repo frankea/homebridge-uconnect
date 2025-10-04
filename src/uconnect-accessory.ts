@@ -125,7 +125,7 @@ export class UconnectPlatformAccessory {
     if (value === this.platform.Characteristic.LockTargetState.SECURED) {
       this.lockTargetState = value;
       try {
-        if (await moparApi.signIn(this.platform.username, this.platform.password, this.platform.brand)) {
+        if (await moparApi.signIn(this.platform.username, this.platform.password, this.platform.brand, this.platform.region)) {
           this.platform.log.debug('Successfully authenticated for lock command');
           const requestId = await moparApi.lockCar(this.accessory.context.vehicle.vin, this.platform.pin, this.platform.useGuardian);
           if (!moparApi.isValidRequestId(requestId)) {
@@ -162,7 +162,7 @@ export class UconnectPlatformAccessory {
     if (value === this.platform.Characteristic.LockTargetState.UNSECURED) {
       this.unlockTargetState = value;
       try {
-        if (await moparApi.signIn(this.platform.username, this.platform.password, this.platform.brand)) {
+        if (await moparApi.signIn(this.platform.username, this.platform.password, this.platform.brand, this.platform.region)) {
           this.platform.log.debug('Successfully authenticated for unlock command');
           const requestId = await moparApi.unlockCar(this.accessory.context.vehicle.vin, this.platform.pin, this.platform.useGuardian);
           if (!moparApi.isValidRequestId(requestId)) {
@@ -206,7 +206,7 @@ export class UconnectPlatformAccessory {
     if (value) {
       this.startEngineState = value;
       try {
-        if (await moparApi.signIn(this.platform.username, this.platform.password, this.platform.brand)) {
+        if (await moparApi.signIn(this.platform.username, this.platform.password, this.platform.brand, this.platform.region)) {
           this.platform.log.debug('Successfully authenticated for engine start command');
           const requestId = await moparApi.startCar(this.accessory.context.vehicle.vin, this.platform.pin, this.platform.useGuardian);
           if (!moparApi.isValidRequestId(requestId)) {
@@ -247,7 +247,7 @@ export class UconnectPlatformAccessory {
     if (!value) {
       this.stopEngineState = value;
       try {
-        if (await moparApi.signIn(this.platform.username, this.platform.password, this.platform.brand)) {
+        if (await moparApi.signIn(this.platform.username, this.platform.password, this.platform.brand, this.platform.region)) {
           this.platform.log.debug('Successfully authenticated for engine stop command');
           const requestId = await moparApi.stopCar(this.accessory.context.vehicle.vin, this.platform.pin, this.platform.useGuardian);
           if (!moparApi.isValidRequestId(requestId)) {
