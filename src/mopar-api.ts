@@ -476,7 +476,22 @@ class MoparApi {
     }
 
     if (parsedVehicles.length === 0) {
-      return [];
+      const diagnostic: string[] = [];
+      const data = response.data ?? {};
+      if (data && typeof data === 'object') {
+        for (const [key, value] of Object.entries(data)) {
+          if (diagnostic.length >= 6) {
+            break;
+          }
+          const descriptor = Array.isArray(value)
+            ? `array(${value.length})`
+            : value && typeof value === 'object'
+              ? 'object'
+              : typeof value;
+          diagnostic.push(`${key}:${descriptor}`);
+        }
+      }
+      throw new Error(`No vehicles in response. Observed top-level keys: ${diagnostic.join(', ') || 'none'}`);
     }
 
     for (const item of parsedVehicles) {
