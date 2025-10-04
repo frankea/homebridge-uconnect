@@ -656,7 +656,35 @@ class MoparApi {
       delete axiosConfig.data;
     }
 
-    return this.axiosInstance.request<T>(axiosConfig);
+    try {
+      return await this.axiosInstance.request<T>(axiosConfig);
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const statusText = error.response?.statusText;
+        let details = '';
+        if (error.response?.data) {
+          if (typeof error.response.data === 'string') {
+            details = error.response.data;
+          } else {
+            try {
+              details = JSON.stringify(error.response.data);
+            } catch {
+              details = String(error.response.data);
+            }
+          }
+        }
+        const messageParts = [`HTTP ${status ?? '???'}`];
+        if (statusText) {
+          messageParts.push(statusText);
+        }
+        if (details) {
+          messageParts.push(details);
+        }
+        throw new Error(messageParts.join(' - '));
+      }
+      throw error;
+    }
   }
 
   private defaultAwsHeaders(apiKey: string): Record<string, string> {
