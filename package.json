@@ -5,16 +5,16 @@
   "description": "A plugin to expose Uconnect Car controls to lock/unlock car and start/stop engine",
   "license": "MIT",
   "author": {
-    "name": "Gilad Yahalom",
-    "url": "https://github.com/gyahalom"
+    "name": "A. Franke (forked from Gilad Yahalom)",
+    "url": "https://github.com/frankea"
   },
-  "homepage": "https://github.com/gyahalom/homebridge-uconnect#readme",
+  "homepage": "https://github.com/frankea/homebridge-uconnect#readme",
   "repository": {
     "type": "git",
-    "url": "git://github.com/gyahalom/homebridge-uconnect.git"
+    "url": "git://github.com/frankea/homebridge-uconnect.git"
   },
   "bugs": {
-    "url": "https://github.com/gyahalom/homebridge-uconnect/issues"
+    "url": "https://github.com/frankea/homebridge-uconnect/issues"
   },
   "funding": {
     "type" : "paypal",
