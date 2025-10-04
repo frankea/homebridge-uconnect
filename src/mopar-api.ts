@@ -554,6 +554,29 @@ class MoparApi {
 
     visit(response.data);
 
+    if (response.data && typeof response.data === 'object') {
+      const ownedVins = (response.data as Record<string, unknown>).owned_vins;
+      if (ownedVins && typeof ownedVins === 'object' && !Array.isArray(ownedVins)) {
+        for (const [vinKey, value] of Object.entries(ownedVins as Record<string, unknown>)) {
+          const detail = value && typeof value === 'object' && !Array.isArray(value)
+            ? value as Record<string, unknown>
+            : undefined;
+          registerCandidate(vinKey, detail);
+        }
+      }
+
+      const vehiclesInfo = (response.data as Record<string, unknown>).vehiclesInfo;
+      if (vehiclesInfo && typeof vehiclesInfo === 'object' && !Array.isArray(vehiclesInfo)) {
+        for (const value of Object.values(vehiclesInfo as Record<string, unknown>)) {
+          if (value && typeof value === 'object' && !Array.isArray(value)) {
+            const record = value as Record<string, unknown>;
+            const vin = extractVinFromObject(record);
+            registerCandidate(vin, record);
+          }
+        }
+      }
+    }
+
     if (candidates.size === 0) {
       const diagnostic: string[] = [];
       const data = response.data ?? {};
